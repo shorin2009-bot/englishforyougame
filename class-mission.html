@@ -76,7 +76,7 @@
   .answerSpeaker:hover{transform:scale(1.08);filter:brightness(1.08)}
   .answerText{min-width:0}
   #qaControls{display:flex;align-items:center;justify-content:center;gap:1.2%;min-height:26%}
-  #checkBtn{padding:.55em 2.25em;border-radius:999px;color:#fff;background:linear-gradient(#ffd34a,#ff9200);border:3px solid #fff;font-size:clamp(14px,1.55vw,27px);font-weight:1000;text-shadow:0 2px 0 #c45a00;box-shadow:0 6px 0 #e56500,0 9px 18px #003a6d44;transition:.2s}
+  #checkBtn{padding:.42em 1.7em;border-radius:999px;color:#fff;background:linear-gradient(#ffd34a,#ff9200);border:3px solid #fff;font-size:clamp(11px,1.08vw,19px);font-weight:1000;text-shadow:0 2px 0 #c45a00;box-shadow:0 5px 0 #e56500,0 9px 18px #003a6d44;transition:.2s}
   #checkBtn:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.08)}
   #checkBtn:disabled{opacity:.35;filter:grayscale(.6);cursor:not-allowed}
   .judgeBtn{width:clamp(38px,4vw,70px);height:clamp(38px,4vw,70px);border-radius:18px;color:#fff;border:3px solid #fff;font-size:clamp(20px,2.2vw,38px);font-weight:1000;box-shadow:0 5px 13px #003c7555;opacity:0;transform:scale(.7);pointer-events:none;transition:.25s}
@@ -264,32 +264,48 @@ function sfx(kind){
   }
 }
 
+/* ---------- VOICES ----------
+   Narrator: a warm teacher voice that reads the questions and model answers.
+   Nick: an ~11-year-old boy -> a male voice raised in pitch, a little faster, with emotion per phrase.
+   Natural (online) voices in Microsoft Edge sound best; Chrome uses Google voices. */
+let narratorVoice=null;
 function chooseVoices(){
   if(!('speechSynthesis' in window)) return;
-  const vs=speechSynthesis.getVoices();
-  const preferred=['Microsoft Sonia','Microsoft Ryan','Google UK English Female','Google UK English Male','Daniel','Serena'];
-  selectedVoice=preferred.map(n=>vs.find(v=>v.name.includes(n))).find(Boolean) || vs.find(v=>/^en-GB/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null;
-
-  // Nick's intro: prefer a British male voice, then shape it slightly younger with rate/pitch.
-  const teenMalePreferred=['Microsoft Ryan','Ryan','Google UK English Male','Daniel','Arthur','Oliver','George'];
-  teenMaleVoice=teenMalePreferred.map(n=>vs.find(v=>v.name.includes(n) && /^en-GB/i.test(v.lang))).find(Boolean)
-    || vs.find(v=>/^en-GB/i.test(v.lang) && /male|ryan|daniel|arthur|oliver|george/i.test(v.name))
-    || vs.find(v=>/^en-GB/i.test(v.lang))
-    || selectedVoice;
+  const vs=speechSynthesis.getVoices(), en=vs.filter(v=>/^en/i.test(v.lang));
+  const pick=names=>{for(const n of names){const v=en.find(v=>v.name.toLowerCase().includes(n.toLowerCase()));if(v)return v}return null};
+  narratorVoice=pick(['Sonia Online','Libby Online','Jenny Online','Aria Online','Ava Online','Emma Online','Google UK English Female','Google US English','Samantha','Serena','Zira','Hazel','Susan'])
+    || en.find(v=>/en-GB/i.test(v.lang)) || en[0] || null;
+  teenMaleVoice=pick(['Guy Online','Christopher Online','Eric Online','Andrew Online','Brian Online','Ryan Online','Google UK English Male','Daniel','Alex','Mark','David','Fred'])
+    || en.find(v=>/male/i.test(v.name)) || narratorVoice;
+  selectedVoice=narratorVoice;
 }
 chooseVoices(); if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=chooseVoices}
-function speak(text,opts={}){
+const NICK={pitch:1.55,rate:1.06};             // young, bright
+// Speak a list of phrases one after another; each phrase may set its own voice / pitch / rate.
+function speakSeq(items){
   if(!soundOn || !('speechSynthesis' in window)) return;
-  speechToken++; const token=speechToken; speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='en-GB';
-  u.rate=opts.rate ?? .92;
-  u.pitch=opts.pitch ?? 1.02;
-  u.volume=opts.volume ?? .95;
-  const chosen=opts.voice || selectedVoice;
-  if(chosen)u.voice=chosen;
-  u.onend=()=>{if(token!==speechToken)return}; speechSynthesis.speak(u);
+  speechToken++; speechSynthesis.cancel();
+  items.forEach(it=>{
+    const u=new SpeechSynthesisUtterance(it.t);
+    const isNick=it.who==='nick', v=it.voice||(isNick?teenMaleVoice:narratorVoice);
+    if(v){u.voice=v;u.lang=v.lang}else u.lang='en-GB';
+    u.pitch=it.pitch??(isNick?NICK.pitch:1.08);
+    u.rate=it.rate??(isNick?NICK.rate:.9);
+    u.volume=1; speechSynthesis.speak(u);
+  });
 }
+function speak(text,opts={}){speakSeq([{t:text,who:opts.voice===teenMaleVoice?'nick':'narrator',pitch:opts.pitch,rate:opts.rate}])}
+// Nick's emotional lines
+const nickLine={
+  intro:[{t:'Oh no!',who:'nick',pitch:1.7,rate:1.12},{t:"I don't remember my classes...",who:'nick',pitch:1.4,rate:.92},{t:'Can you help me? Please!',who:'nick',pitch:1.75,rate:1.02}],
+  cheer:()=>[[{t:'Yay! I found it!',who:'nick',pitch:1.8,rate:1.12},{t:'Thank you!',who:'nick',pitch:1.65,rate:1.05}],
+             [{t:'Yes! That is my class!',who:'nick',pitch:1.8,rate:1.1},{t:'You are awesome!',who:'nick',pitch:1.7,rate:1.08}],
+             [{t:'Woo-hoo! Mission complete!',who:'nick',pitch:1.85,rate:1.1}],
+             [{t:'Great! I am not late!',who:'nick',pitch:1.75,rate:1.1},{t:'Thanks a lot!',who:'nick',pitch:1.65,rate:1.05}]][Math.random()*4|0],
+  wrongRoom:()=>[[{t:'Hmm... not this room!',who:'nick',pitch:1.45,rate:.95}],[{t:'Oops! Wrong room!',who:'nick',pitch:1.6,rate:1.05}],[{t:'Uh-oh... try another one!',who:'nick',pitch:1.5,rate:1}]][Math.random()*3|0],
+  retry:[{t:"Oops! Let's try again!",who:'nick',pitch:1.65,rate:1.05},{t:'You can do it!',who:'nick',pitch:1.75,rate:1.05}],
+  end:[{t:'Hooray!',who:'nick',pitch:1.9,rate:1.1},{t:'Thank you so much!',who:'nick',pitch:1.7,rate:1.02},{t:'Now I know my timetable!',who:'nick',pitch:1.6,rate:1}],
+};
 
 function renderTimetable(activeSubject){
   $('#tableCard').innerHTML=`<table><thead><tr><th style="width:34%">Subject</th><th style="width:34%">Time</th><th style="width:32%">Place</th></tr></thead><tbody>${timetable.map(r=>`<tr class="${r.subject===activeSubject?'active':''}"><td class="subject"><span class="subIcon">${r.icon}</span>${r.subject}</td><td>${r.time}</td><td>${r.place}</td></tr>`).join('')}</tbody></table>`;
@@ -354,7 +370,7 @@ function revealAnswer(){
 function acceptAnswer(){
   if(!answerShown)return;sfx('correct');$('#acceptBtn').classList.remove('show');$('#retryBtn').classList.remove('show');answerShown=false;
   if(currentQ===1){q1Accepted=true;$('#q2Speaker').disabled=false;$('#q2Speaker').classList.add('pulse');$('#checkBtn').disabled=true;$('#statusText').textContent='Now tap the second speaker.';$('#statusText').classList.add('show')}
-  else{q2Accepted=true;$('#checkBtn').disabled=true;$('#statusText').textContent='Find the correct room on the map!';$('#statusText').classList.add('show');$('#mapHotspots').classList.add('unlocked');speak('Find the correct room on the map!')}
+  else{q2Accepted=true;$('#checkBtn').disabled=true;$('#statusText').textContent='Find the correct room on the map!';$('#statusText').classList.add('show');$('#mapHotspots').classList.add('unlocked');speakSeq([{t:'Now... where is my class?',who:'nick',pitch:1.5,rate:.98},{t:'Find it on the map!',who:'nick',pitch:1.7,rate:1.05}])}
 }
 function retryAnswer(){
   if(!answerShown)return;
@@ -363,7 +379,7 @@ function retryAnswer(){
   const hint=currentQ===1?$('#hint1Wrap'):$('#hint2Wrap');
   box.classList.remove('show');hint.classList.remove('hidden');
   answerShown=false;$('#acceptBtn').classList.remove('show');$('#retryBtn').classList.remove('show');$('#checkBtn').disabled=false;
-  speak(currentQuestion(),{rate:.92,pitch:1.02});
+  speakSeq([...nickLine.retry,{t:currentQuestion(),who:'narrator'}]);
 }
 function startQ2(){
   if(!q1Accepted)return;
@@ -383,12 +399,12 @@ function chooseRoom(btn,room){
       sfx('missionSuccess');
       stars=Math.min(5,stars+1);$('#starCount').textContent=stars;const sp=$('#starPill');sp.classList.remove('bump');void sp.offsetWidth;sp.classList.add('bump');
       $('#mcStars').textContent='⭐ '+stars+'/5';
-      $('#missionComplete').classList.add('show');
+      $('#missionComplete').classList.add('show');speakSeq(nickLine.cheer());
       confetti(72);
       setTimeout(()=>confetti(38),620);
     });
   }
-  else{sfx('error');btn.classList.remove('wrong');void btn.offsetWidth;btn.classList.add('wrong');$('#statusText').textContent='Try another room!';$('#statusText').classList.add('show')}
+  else{sfx('error');speakSeq(nickLine.wrongRoom());btn.classList.remove('wrong');void btn.offsetWidth;btn.classList.add('wrong');$('#statusText').textContent='Try another room!';$('#statusText').classList.add('show')}
 }
 function resetRoute(){
   cancelAnimationFrame(walkRAF);clearInterval(stepTimer);
@@ -415,14 +431,14 @@ function confetti(n=50){
   for(let i=0;i<n;i++){const c=document.createElement('i');c.className='confetti';c.style.left=(Math.random()*100)+'%';c.style.top='-4%';c.style.background=colors[i%colors.length];c.style.animationDelay=(Math.random()*.45)+'s';c.style.animationDuration=(1.35+Math.random()*1.1)+'s';c.style.transform=`rotate(${Math.random()*180}deg)`;$('#confettiLayer').appendChild(c);setTimeout(()=>c.remove(),2900)}
 }
 
-$('#playHot').addEventListener('click',()=>{ensureAudio();sfx('bell');showScreen('intro');$('#storyBubble').classList.remove('show');$('#introNext').classList.remove('show');setTimeout(()=>{$('#storyBubble').classList.add('show');speak('Oh no! I don’t remember my classes. Can you help me?',{rate:.95,pitch:1.12,volume:.98,voice:teenMaleVoice})},480);setTimeout(()=>$('#introNext').classList.add('show'),1450)});
+$('#playHot').addEventListener('click',()=>{ensureAudio();sfx('bell');showScreen('intro');$('#storyBubble').classList.remove('show');$('#introNext').classList.remove('show');setTimeout(()=>{$('#storyBubble').classList.add('show');speakSeq(nickLine.intro)},480);setTimeout(()=>$('#introNext').classList.add('show'),1450)});
 $('#introNext').addEventListener('click',()=>{sfx('click');speechSynthesis.cancel();startMission(0)});
 $('#q1Speaker').addEventListener('click',()=>{sfx('click');speak(missions[currentMission].q1,{rate:.92,pitch:1.02})});
 $('#q2Speaker').addEventListener('click',startQ2);
 $('#hint1Btn').addEventListener('click',()=>showHint(1));$('#hint2Btn').addEventListener('click',()=>showHint(2));
 $('#a1Speaker').addEventListener('click',()=>speakAnswer(1));$('#a2Speaker').addEventListener('click',()=>speakAnswer(2));
 $('#checkBtn').addEventListener('click',revealAnswer);$('#acceptBtn').addEventListener('click',acceptAnswer);$('#retryBtn').addEventListener('click',retryAnswer);
-$('#nextMission').addEventListener('click',()=>{sfx('click');if(currentMission<missions.length-1)startMission(currentMission+1);else{showScreen('end');sfx('grandSuccess');confetti(125);setTimeout(()=>confetti(90),680);setTimeout(()=>speak('Thank you! Now I know my timetable!',{rate:.94,pitch:1.06}),620)}});
+$('#nextMission').addEventListener('click',()=>{sfx('click');if(currentMission<missions.length-1)startMission(currentMission+1);else{showScreen('end');sfx('grandSuccess');confetti(125);setTimeout(()=>confetti(90),680);setTimeout(()=>speakSeq(nickLine.end),620)}});
 $('#againBtn').addEventListener('click',()=>{sfx('click');startMission(0)});$('#homeBtn').addEventListener('click',()=>{speechSynthesis.cancel();showScreen('cover')});
 $('#soundBtn').addEventListener('click',()=>{soundOn=!soundOn;$('#soundBtn').textContent=soundOn?'🔊':'🔇';if(!soundOn)speechSynthesis.cancel();else sfx('click')});
 $('#fullBtn').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('#gameShell').requestFullscreen();else await document.exitFullscreen()}catch(e){}});
