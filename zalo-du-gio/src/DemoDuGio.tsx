@@ -71,10 +71,10 @@ export const DemoDuGio: React.FC = () => {
         }}
       >
         <Sequence from={0} durationInFrames={CLIP1_FRAMES} layout="none">
-          <Video src={staticFile("demo1.mp4")} style={{ width: W, height: VID_H, objectFit: "contain", display: "block" }} />
+          <Video src={staticFile("demo1.mp4")} volume={0} style={{ width: W, height: VID_H, objectFit: "contain", display: "block" }} />
         </Sequence>
         <Sequence from={CLIP1_FRAMES} durationInFrames={CLIP2_FRAMES} layout="none">
-          <Video src={staticFile("demo2.mp4")} style={{ width: W, height: VID_H, objectFit: "contain", display: "block" }} />
+          <Video src={staticFile("demo2.mp4")} volume={0} style={{ width: W, height: VID_H, objectFit: "contain", display: "block" }} />
         </Sequence>
         {outro && <OutroCover t={t} />}
         {/* thanh tiến độ tiết dạy */}
