@@ -44,8 +44,131 @@ const WIPE: [number, number] = [7.7, 8.9];
 const wipeX = (t: number) => lerp(t, WIPE[0], WIPE[1], -25, 125); // % chiều ngang cửa sổ
 const greyAt = (t: number) => lerp(t, 3.0, 4.7, 0, 1);
 
-const BookWorld: React.FC<{ t: number; dropY: number; grey: number }> = ({ t, dropY, grey }) => {
+// ---------------- Hiệu ứng "đọc từng dòng" trên trang sách ----------------
+// Toạ độ (px trong ảnh sách) của từng dòng hội thoại: [y giữa dòng, x mép phải]
+const TEXT_X = 113;
+const LINE_H = 21;
+type Turn = { who: "Elena" | "Trang"; lines: [number, number][] };
+const TURNS: Turn[] = [
+  { who: "Elena", lines: [[599, 372]] },
+  { who: "Trang", lines: [[628, 519], [648, 519], [667, 490]] },
+  { who: "Elena", lines: [[696, 519], [715, 340]] },
+  { who: "Trang", lines: [[744, 489], [763, 426]] },
+  { who: "Elena", lines: [[792, 424], [811, 426]] },
+  { who: "Trang", lines: [[840, 462], [859, 446], [878, 368]] },
+];
+const READ_START = 1.75;
+const LINE_DUR = 0.21;
+const TURN_COLOR = { Elena: "#FFE14D", Trang: "#7FF0D8" } as const;
+
+// mốc bắt đầu/kết thúc của từng dòng và từng lượt
+const LINES = TURNS.flatMap((turn, ti) => turn.lines.map(([y, r]) => ({ ti, y, r })));
+const lineStart = (i: number) => READ_START + i * LINE_DUR;
+const TURN_SPAN = TURNS.map((_, ti) => {
+  const idx = LINES.map((l, i) => (l.ti === ti ? i : -1)).filter((i) => i >= 0);
+  return [lineStart(idx[0]), lineStart(idx[idx.length - 1]) + LINE_DUR] as [number, number];
+});
+const READ_END = lineStart(LINES.length);
+
+const Highlight: React.FC<{ i: number; t: number; dx: number; dy: number; grey: number }> = ({ i, t, dx, dy, grey }) => {
+  const l = LINES[i];
+  const p = lerp(t, lineStart(i), lineStart(i) + LINE_DUR, 0, 1, (x) => x);
+  if (p <= 0) return null;
+  const [, end] = TURN_SPAN[l.ti];
+  const fade = lerp(t, end, end + 0.6, 1, 0.35);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: TEXT_X - 4 - dx,
+        top: l.y - LINE_H / 2 - dy,
+        width: (l.r - TEXT_X + 10) * p,
+        height: LINE_H,
+        borderRadius: 6,
+        background: TURN_COLOR[TURNS[l.ti].who],
+        mixBlendMode: "multiply",
+        opacity: 0.95 * fade * (1 - 0.35 * grey),
+      }}
+    />
+  );
+};
+
+const ReadingFx: React.FC<{ t: number; frame: number; grey: number }> = ({ t, frame, grey }) => {
+  if (t < READ_START || t > 5.3) return null;
+  // lượt thoại đang đọc
+  const active = TURN_SPAN.findIndex(([a, b]) => t >= a && t < b + 0.12);
+  const cur = Math.min(LINES.length - 1, Math.floor((t - READ_START) / LINE_DUR));
+  const lp = lerp(t, lineStart(cur), lineStart(cur) + LINE_DUR, 0, 1, (x) => x);
+  const fingerX = TEXT_X + (LINES[cur].r - TEXT_X) * lp;
+  const fingerY = LINES[cur].y + 4;
+  const fingerVis = life(t, READ_START, 4.95, 0.15, 0.3);
+  return (
+    <>
+      {/* vệt dạ quang của các lượt đã đọc (nằm trên trang) */}
+      {LINES.map((l, i) => (l.ti === active ? null : <Highlight key={i} i={i} t={t} dx={0} dy={0} grey={grey} />))}
+      {/* lượt đang đọc nổi lên khỏi trang */}
+      {active >= 0 &&
+        (() => {
+          const turn = TURNS[active];
+          const [a, b] = TURN_SPAN[active];
+          const up = Math.min(pop(frame, a, 12, 220, 0.6), lerp(t, b, b + 0.12, 1, 0));
+          const top = turn.lines[0][0] - LINE_H / 2 - 7;
+          const bottom = turn.lines[turn.lines.length - 1][0] + LINE_H / 2 + 7;
+          const left = TEXT_X - 10;
+          const width = Math.max(...turn.lines.map((l) => l[1])) - left + 14;
+          const color = turn.who === "Elena" ? "#FF5C9A" : "#14A39B";
+          return (
+            <div
+              style={{
+                position: "absolute",
+                left,
+                top,
+                width,
+                height: bottom - top,
+                borderRadius: 8,
+                overflow: "hidden",
+                backgroundImage: `url(${staticFile("book.jpg")})`,
+                backgroundSize: `${BOOK_W}px ${BOOK_H}px`,
+                backgroundPosition: `${-left}px ${-top}px`,
+                transform: `translate(${-3 * up}px, ${-5 * up}px) scale(${1 + 0.045 * up})`,
+                boxShadow: `0 ${8 * up}px ${16 * up}px rgba(40,20,60,${0.35 * up}), 0 0 0 ${2.5 * up}px ${color}`,
+              }}
+            >
+              {LINES.map((l, i) =>
+                l.ti === active ? <Highlight key={i} i={i} t={t} dx={left} dy={top} grey={grey} /> : null,
+              )}
+            </div>
+          );
+        })()}
+      {/* ngón tay dò theo dòng chữ */}
+      <div
+        style={{
+          position: "absolute",
+          left: fingerX - 40,
+          top: fingerY,
+          opacity: fingerVis,
+          transform: `rotate(-28deg) translateY(${Math.sin(t * 18) * 1.5}px)`,
+          filter: "drop-shadow(0 4px 5px rgba(0,0,0,0.3))",
+        }}
+      >
+        <Emoji name="point" size={46} />
+      </div>
+    </>
+  );
+};
+
+const BookWorld: React.FC<{ t: number; frame: number; dropY: number; grey: number; rx: number; enter: number }> = ({
+  t,
+  frame,
+  dropY,
+  grey,
+  rx,
+  enter,
+}) => {
   const [, cx, cy, s, rot] = camAt(t);
+  const glare = lerp(t, 0.45, 1.25, 120, -20, easeInOut);
+  const greyFilter =
+    grey > 0 ? `grayscale(${grey}) contrast(${1 - 0.12 * grey}) brightness(${1 - 0.06 * grey})` : undefined;
   return (
     <div
       style={{
@@ -55,7 +178,7 @@ const BookWorld: React.FC<{ t: number; dropY: number; grey: number }> = ({ t, dr
         width: BOOK_W,
         height: BOOK_H,
         transformOrigin: "0 0",
-        transform: `translate(${WIN.w / 2}px, ${WIN.h / 2 + dropY}px) rotate(${rot}deg) scale(${s}) translate(${-cx}px, ${-cy}px)`,
+        transform: `translate(${WIN.w / 2}px, ${WIN.h / 2 + dropY}px) rotateX(${rx}deg) rotate(${rot}deg) scale(${s * enter}) translate(${-cx}px, ${-cy}px)`,
       }}
     >
       <Img
@@ -65,17 +188,67 @@ const BookWorld: React.FC<{ t: number; dropY: number; grey: number }> = ({ t, dr
           height: BOOK_H,
           borderRadius: 26,
           boxShadow: "0 30px 70px rgba(70,30,0,0.35)",
-          filter: grey > 0 ? `grayscale(${grey}) contrast(${1 - 0.12 * grey}) brightness(${1 - 0.06 * grey})` : undefined,
+          filter: greyFilter,
         }}
       />
+      {t < 1.3 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: 26,
+            background:
+              "linear-gradient(115deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 60%)",
+            backgroundSize: "300% 100%",
+            backgroundPosition: `${glare}% 0%`,
+          }}
+        />
+      )}
+      <ReadingFx t={t} frame={frame} grey={grey} />
     </div>
+  );
+};
+
+// ngôi sao lấp lánh khi sách đáp xuống
+const LAND_SPARKS: [number, number, number][] = [
+  [80, 590, 64],
+  [985, 610, 50],
+  [60, 1250, 48],
+  [960, 1265, 66],
+  [520, 560, 40],
+];
+const LandSparkles: React.FC<{ t: number }> = ({ t }) => {
+  if (t < 0.45 || t > 1.5) return null;
+  return (
+    <>
+      {LAND_SPARKS.map(([x, y, s], i) => {
+        const k = lerp(t, 0.45 + i * 0.06, 1.25 + i * 0.06, 0, 1, (v) => v);
+        const sc = Math.sin(k * Math.PI);
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: x - s / 2,
+              top: y - s / 2,
+              transform: `scale(${sc}) rotate(${k * 120}deg)`,
+              filter: "drop-shadow(0 0 10px rgba(255,200,80,0.9))",
+            }}
+          >
+            <Star4 size={s} color={i % 2 ? "#FFD23F" : "#FFFFFF"} />
+          </div>
+        );
+      })}
+    </>
   );
 };
 
 const Book: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   if (t > 10.7) return null;
-  const drop = pop(frame, 0, 12, 120, 0.9);
-  const dropY = (1 - drop) * -620;
+  const drop = pop(frame, 0, 13, 110, 0.9);
+  const dropY = (1 - drop) * -420;
+  const rx = (1 - drop) * 62; // lật 3D từ nằm nghiêng lên
+  const enter = 0.72 + 0.28 * drop;
   const grey = greyAt(t);
   const x = wipeX(t);
   // thu nhỏ trang sách vào khung TV
@@ -95,8 +268,8 @@ const Book: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
         opacity: 1 - shrink,
       }}
     >
-      <div style={{ position: "absolute", inset: 0, overflow: "hidden", WebkitMaskImage: mask }}>
-        <BookWorld t={t} dropY={dropY} grey={grey} />
+      <div style={{ position: "absolute", inset: 0, overflow: "hidden", WebkitMaskImage: mask, perspective: 1700 }}>
+        <BookWorld t={t} frame={frame} dropY={dropY} grey={grey} rx={rx} enter={enter} />
       </div>
       {t >= WIPE[0] && (
         <div
@@ -108,7 +281,7 @@ const Book: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
             clipPath: `polygon(0% 0%, ${x}% 0%, ${x - 25}% 100%, 0% 100%)`,
           }}
         >
-          <BookWorld t={t} dropY={dropY} grey={0} />
+          <BookWorld t={t} frame={frame} dropY={dropY} grey={0} rx={rx} enter={enter} />
         </div>
       )}
     </div>
@@ -595,6 +768,7 @@ export const HookLayer: React.FC = () => {
   return (
     <>
       <Book t={t} frame={frame} />
+      <LandSparkles t={t} />
       <Boredom t={t} frame={frame} />
       <Stamp t={t} frame={frame} />
       <Meter t={t} frame={frame} />
