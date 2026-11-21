@@ -22,6 +22,11 @@ export const CLIP_START_F = 374; // clip bắt đầu ở giây 12.47
 export const CLIP_F = 651; // clip dài 21.7 giây, giữ nguyên
 export const OUTRO_F = 90; // màn kết 3 giây
 export const TOTAL_F = CLIP_START_F + CLIP_F + OUTRO_F;
+// Đoạn mở đầu bìa sách + lật trang chèn thêm 0.6 giây trước toàn bộ timeline.
+// Mọi mốc trong file này tính theo "thời gian cũ"; thời gian thật = cũ + SHIFT.
+export const SHIFT_F = 18;
+export const SHIFT = SHIFT_F / FPS;
+export const TOTAL_ALL = TOTAL_F + SHIFT_F;
 export const CS = CLIP_START_F / FPS;
 export const CLIP_LEN = CLIP_F / FPS;
 export const OUTRO_AT = CS + CLIP_LEN - 0.15;
@@ -74,9 +79,15 @@ export const REVEAL_AT = 14.4;
 
 // ---------------- Hiệu ứng âm thanh (thời gian trong video) ----------------
 export const SFX: { at: number; src: string; vol: number }[] = [
-  { at: 0.0, src: "intro", vol: 0.55 },
-  { at: 0.48, src: "impact", vol: 0.6 },
-  { at: 1.45, src: "zoom", vol: 0.3 },
+  // bìa sách rơi xuống, mở bìa, lật trang
+  { at: -0.33, src: "impact", vol: 0.5 },
+  { at: -0.2, src: "coverflip", vol: 0.55 },
+  ...[0.52, 0.84, 1.05, 1.25, 1.43, 1.6, 1.76].map((at, i) => ({
+    at,
+    src: `flip${(i % 3) + 1}`,
+    vol: 0.42 + (i % 2) * 0.08,
+  })),
+  { at: 2.15, src: "zoom", vol: 0.3 },
   { at: 3.0, src: "tick", vol: 0.45 },
   { at: V(4.65), src: "pop", vol: 0.55 },
   { at: V(5.79), src: "boom", vol: 0.75 },

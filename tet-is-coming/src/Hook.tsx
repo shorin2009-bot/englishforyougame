@@ -1,7 +1,7 @@
 import React from "react";
-import { Img, random, staticFile, useCurrentFrame } from "remotion";
+import { Img, OffthreadVideo, Sequence, random, staticFile, useCurrentFrame } from "remotion";
 import { BODY, TITLE } from "./fonts";
-import { FPS, V } from "./timeline";
+import { FPS, SHIFT, SHIFT_F, V } from "./timeline";
 import { Emoji, Outline, Star4, clamp, easeIn, easeInOut, easeOut, lerp, life, pop } from "./ui";
 
 // ---------------- Ảnh sách + camera ----------------
@@ -12,9 +12,9 @@ export const WIN = { y: 400, w: 1080, h: 1070 }; // cửa sổ camera trên màn
 type Key = [t: number, cx: number, cy: number, s: number, rot: number];
 const CAM: Key[] = [
   [0.0, 866, 607, 0.574, 0],
-  [1.45, 866, 607, 0.574, 0],
-  [2.55, 322, 700, 2.05, -1.2],
-  [4.6, 322, 850, 2.12, -1.2],
+  [2.15, 866, 607, 0.574, 0],
+  [3.05, 322, 700, 2.05, -1.2],
+  [4.8, 322, 850, 2.12, -1.2],
   [7.5, 322, 925, 2.18, 0],
   [8.9, 322, 925, 2.18, 0],
   [9.7, 866, 607, 0.574, 0],
@@ -42,7 +42,7 @@ const camAt = (t: number) => {
 // mức xám của trang sách: chán dần rồi được "đũa thần" trả màu
 const WIPE: [number, number] = [7.7, 8.9];
 const wipeX = (t: number) => lerp(t, WIPE[0], WIPE[1], -25, 125); // % chiều ngang cửa sổ
-const greyAt = (t: number) => lerp(t, 3.0, 4.7, 0, 1);
+const greyAt = (t: number) => lerp(t, 3.2, 4.8, 0, 1);
 
 // ---------------- Hiệu ứng "đọc từng dòng" trên trang sách ----------------
 // Toạ độ (px trong ảnh sách) của từng dòng hội thoại: [y giữa dòng, x mép phải]
@@ -57,8 +57,8 @@ const TURNS: Turn[] = [
   { who: "Elena", lines: [[792, 424], [811, 426]] },
   { who: "Trang", lines: [[840, 462], [859, 446], [878, 368]] },
 ];
-const READ_START = 1.75;
-const LINE_DUR = 0.21;
+const READ_START = 2.75;
+const LINE_DUR = 0.19;
 const TURN_COLOR = { Elena: "#FFE14D", Trang: "#7FF0D8" } as const;
 
 // mốc bắt đầu/kết thúc của từng dòng và từng lượt
@@ -157,18 +157,134 @@ const ReadingFx: React.FC<{ t: number; frame: number; grey: number }> = ({ t, fr
   );
 };
 
-const BookWorld: React.FC<{ t: number; frame: number; dropY: number; grey: number; rx: number; enter: number }> = ({
-  t,
-  frame,
-  dropY,
-  grey,
-  rx,
-  enter,
-}) => {
+// ---------------- Mở đầu: bìa sách -> mở bìa -> lật trang tới Unit 5 ----------------
+// Vị trí bản ghi lật trang (flip.mp4) trong toạ độ ảnh sách (đo bằng so khớp ảnh)
+const REC = { x: 1.69, y: -3.9, w: 1792.2, h: 1237.6 };
+const HALF = BOOK_W / 2; // gáy sách
+const OPEN: [number, number] = [-0.22, 0.42]; // mở bìa
+const FLIP_TRIM = 0.7; // bỏ 0.7 giây đứng yên đầu bản ghi
+const FLIP_RATE = 1.6; // tua nhanh lật trang
+const FLIP_END = 2.2;
+export const COVER_SHIFT = (BOOK_W * 0.75 - HALF) * 0.574; // dời sách đóng vào giữa màn hình
+
+const pageBg = (dx: number): React.CSSProperties => ({
+  backgroundImage: `url(${staticFile("flip-first.jpg")})`,
+  backgroundSize: `${REC.w}px ${REC.h}px`,
+  backgroundPosition: `${REC.x - dx}px ${REC.y}px`,
+});
+
+const FlipIntro: React.FC<{ t: number }> = ({ t }) => {
+  if (t > FLIP_END) return null;
+  const open = lerp(t, OPEN[0], OPEN[1], 0, 1, easeInOut);
+  const shade = Math.sin(open * Math.PI);
+  const closed = t < OPEN[1];
+  const glare = lerp(t, -0.52, -0.12, 120, -20, easeInOut);
+  return (
+    <div style={{ position: "absolute", inset: 0, perspective: 2600, perspectiveOrigin: `${HALF}px ${BOOK_H / 2}px` }}>
+      {closed && (
+        <>
+          {/* độ dày khối giấy */}
+          <div
+            style={{
+              position: "absolute",
+              left: HALF + 10,
+              top: 10,
+              width: HALF,
+              height: BOOK_H,
+              background: "repeating-linear-gradient(90deg,#F4EFE4 0 3px,#E2D9C6 3px 5px)",
+              borderRadius: "6px 20px 20px 6px",
+              boxShadow: "0 30px 70px rgba(70,30,0,0.4)",
+            }}
+          />
+          {/* trang phải nằm dưới bìa */}
+          <div style={{ position: "absolute", left: HALF, top: 0, width: HALF, height: BOOK_H, ...pageBg(HALF) }} />
+        </>
+      )}
+      {t >= OPEN[1] && (
+        <Sequence from={SHIFT_F + Math.round(OPEN[1] * FPS)} durationInFrames={Math.round((FLIP_END - OPEN[1]) * FPS)} layout="none">
+          <OffthreadVideo
+            src={staticFile("flip.mp4")}
+            trimBefore={Math.round(FLIP_TRIM * FPS)}
+            playbackRate={FLIP_RATE}
+            muted
+            style={{
+              position: "absolute",
+              left: REC.x,
+              top: REC.y,
+              width: REC.w,
+              height: REC.h,
+              boxShadow: "0 30px 70px rgba(70,30,0,0.35)",
+            }}
+          />
+        </Sequence>
+      )}
+      {closed && (
+        <div
+          style={{
+            position: "absolute",
+            left: HALF,
+            top: 0,
+            width: HALF,
+            height: BOOK_H,
+            transformOrigin: "left center",
+            transformStyle: "preserve-3d",
+            transform: `rotateY(${-180 * open}deg)`,
+          }}
+        >
+          {/* mặt trước: bìa sách */}
+          <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", borderRadius: "4px 18px 18px 4px", overflow: "hidden" }}>
+            <Img src={staticFile("cover.jpg")} style={{ width: HALF, height: BOOK_H, display: "block" }} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(90deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 6%)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(115deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 60%)",
+                backgroundSize: "300% 100%",
+                backgroundPosition: `${glare}% 0%`,
+              }}
+            />
+            <div style={{ position: "absolute", inset: 0, background: "#000", opacity: shade * 0.35 }} />
+          </div>
+          {/* mặt sau: trang trái của sách */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              transform: "rotateY(180deg)",
+              backfaceVisibility: "hidden",
+              ...pageBg(0),
+            }}
+          >
+            <div style={{ position: "absolute", inset: 0, background: "#000", opacity: shade * 0.3 }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BookWorld: React.FC<{
+  t: number;
+  frame: number;
+  dropY: number;
+  grey: number;
+  rx: number;
+  enter: number;
+  dx: number;
+  intro: boolean;
+}> = ({ t, frame, dropY, grey, rx, enter, dx, intro }) => {
   const [, cx, cy, s, rot] = camAt(t);
-  const glare = lerp(t, 0.45, 1.25, 120, -20, easeInOut);
   const greyFilter =
     grey > 0 ? `grayscale(${grey}) contrast(${1 - 0.12 * grey}) brightness(${1 - 0.06 * grey})` : undefined;
+  const pageIn = lerp(t, 1.95, 2.15, 0, 1);
   return (
     <div
       style={{
@@ -178,29 +294,23 @@ const BookWorld: React.FC<{ t: number; frame: number; dropY: number; grey: numbe
         width: BOOK_W,
         height: BOOK_H,
         transformOrigin: "0 0",
-        transform: `translate(${WIN.w / 2}px, ${WIN.h / 2 + dropY}px) rotateX(${rx}deg) rotate(${rot}deg) scale(${s * enter}) translate(${-cx}px, ${-cy}px)`,
+        transform: `translate(${WIN.w / 2 + dx}px, ${WIN.h / 2 + dropY}px) rotateX(${rx}deg) rotate(${rot}deg) scale(${s * enter}) translate(${-cx}px, ${-cy}px)`,
       }}
     >
-      <Img
-        src={staticFile("book.jpg")}
-        style={{
-          width: BOOK_W,
-          height: BOOK_H,
-          borderRadius: 26,
-          boxShadow: "0 30px 70px rgba(70,30,0,0.35)",
-          filter: greyFilter,
-        }}
-      />
-      {t < 1.3 && (
-        <div
+      {intro && <FlipIntro t={t} />}
+      {pageIn > 0 && (
+        <Img
+          src={staticFile("book.jpg")}
           style={{
             position: "absolute",
-            inset: 0,
+            left: 0,
+            top: 0,
+            width: BOOK_W,
+            height: BOOK_H,
             borderRadius: 26,
-            background:
-              "linear-gradient(115deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 60%)",
-            backgroundSize: "300% 100%",
-            backgroundPosition: `${glare}% 0%`,
+            boxShadow: "0 30px 70px rgba(70,30,0,0.35)",
+            filter: greyFilter,
+            opacity: pageIn,
           }}
         />
       )}
@@ -211,18 +321,18 @@ const BookWorld: React.FC<{ t: number; frame: number; dropY: number; grey: numbe
 
 // ngôi sao lấp lánh khi sách đáp xuống
 const LAND_SPARKS: [number, number, number][] = [
-  [80, 590, 64],
-  [985, 610, 50],
-  [60, 1250, 48],
-  [960, 1265, 66],
-  [520, 560, 40],
+  [272, 600, 62],
+  [806, 622, 48],
+  [252, 1262, 46],
+  [812, 1272, 64],
+  [540, 566, 40],
 ];
 const LandSparkles: React.FC<{ t: number }> = ({ t }) => {
-  if (t < 0.45 || t > 1.5) return null;
+  if (t < -0.4 || t > 0.6) return null;
   return (
     <>
       {LAND_SPARKS.map(([x, y, s], i) => {
-        const k = lerp(t, 0.45 + i * 0.06, 1.25 + i * 0.06, 0, 1, (v) => v);
+        const k = lerp(t, -0.4 + i * 0.05, 0.3 + i * 0.05, 0, 1, (v) => v);
         const sc = Math.sin(k * Math.PI);
         return (
           <div
@@ -245,10 +355,11 @@ const LandSparkles: React.FC<{ t: number }> = ({ t }) => {
 
 const Book: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   if (t > 10.7) return null;
-  const drop = pop(frame, 0, 13, 110, 0.9);
-  const dropY = (1 - drop) * -420;
-  const rx = (1 - drop) * 62; // lật 3D từ nằm nghiêng lên
-  const enter = 0.72 + 0.28 * drop;
+  const drop = pop(frame, -SHIFT, 13, 110, 0.9);
+  const dropY = (1 - drop) * -260;
+  const rx = (1 - drop) * 42; // lật 3D từ nằm nghiêng lên
+  const enter = 0.86 + 0.14 * drop;
+  const dx = -COVER_SHIFT * (1 - lerp(t, OPEN[0], OPEN[1], 0, 1, easeInOut));
   const grey = greyAt(t);
   const x = wipeX(t);
   // thu nhỏ trang sách vào khung TV
@@ -269,7 +380,7 @@ const Book: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
       }}
     >
       <div style={{ position: "absolute", inset: 0, overflow: "hidden", WebkitMaskImage: mask, perspective: 1700 }}>
-        <BookWorld t={t} frame={frame} dropY={dropY} grey={grey} rx={rx} enter={enter} />
+        <BookWorld t={t} frame={frame} dropY={dropY} grey={grey} rx={rx} enter={enter} dx={dx} intro />
       </div>
       {t >= WIPE[0] && (
         <div
@@ -281,7 +392,7 @@ const Book: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
             clipPath: `polygon(0% 0%, ${x}% 0%, ${x - 25}% 100%, 0% 100%)`,
           }}
         >
-          <BookWorld t={t} frame={frame} dropY={dropY} grey={0} rx={rx} enter={enter} />
+          <BookWorld t={t} frame={frame} dropY={dropY} grey={0} rx={rx} enter={enter} dx={dx} intro={false} />
         </div>
       )}
     </div>
@@ -370,8 +481,8 @@ const HookHeaders: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
   return (
     <>
       {/* 1. Câu hook */}
-      <HeaderBox t={t} a={0} b={V(4.62)}>
-        <PopLine frame={frame} at={-0.12}>
+      <HeaderBox t={t} a={-0.9} b={V(4.62)}>
+        <PopLine frame={frame} at={-0.72}>
           <span style={{ ...lineStyle(76), color: "#2E2A4F" }}>Vẫn cho học sinh đọc</span>
         </PopLine>
         <PopLine frame={frame} at={0.85}>
@@ -763,7 +874,7 @@ const LaughRain: React.FC<{ t: number }> = ({ t }) => {
 };
 
 export const HookLayer: React.FC = () => {
-  const frame = useCurrentFrame();
+  const frame = useCurrentFrame() - SHIFT_F;
   const t = frame / FPS;
   return (
     <>

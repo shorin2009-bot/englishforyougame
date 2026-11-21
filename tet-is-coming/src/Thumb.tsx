@@ -4,43 +4,75 @@ import "./fonts";
 import { BODY, TITLE } from "./fonts";
 import { Emoji, FallingBlossoms, Outline, Star4, TetBackground } from "./ui";
 
-// Ảnh bìa TikTok 1080×1920: "Hội thoại SGK 😴  →  Video sinh động 🤩"
+// Ảnh bìa TikTok 1080×1920: SGK Tiếng Anh 8 (đọc chay, chán) -> video hoạt hình sinh động
 export const Thumb: React.FC = () => (
   <AbsoluteFill style={{ overflow: "hidden" }}>
     <TetBackground t={1.2} />
     <FallingBlossoms t={5.3} opacity={0.9} count={14} />
 
     {/* Tiêu đề */}
-    <div style={{ position: "absolute", left: 40, width: 1000, top: 160, textAlign: "center", whiteSpace: "nowrap" }}>
+    <div style={{ position: "absolute", left: 40, width: 1000, top: 150, textAlign: "center", whiteSpace: "nowrap" }}>
       <Outline stroke="#7A0A1E" width={8} color="#FFFFFF" style={{ fontFamily: TITLE, fontWeight: 800, fontSize: 84, lineHeight: 1.1 }}>
         Đừng đọc chay nữa!
       </Outline>
       <div>
-        <Outline stroke="#7A0A1E" width={9} color="#FFD23F" style={{ fontFamily: TITLE, fontWeight: 800, fontSize: 108, lineHeight: 1.08 }} shadow="0 9px 0 rgba(70,0,15,0.5)">
+        <Outline
+          stroke="#7A0A1E"
+          width={9}
+          color="#FFD23F"
+          style={{ fontFamily: TITLE, fontWeight: 800, fontSize: 108, lineHeight: 1.08 }}
+          shadow="0 9px 0 rgba(70,0,15,0.5)"
+        >
           Biến SGK thành
         </Outline>
       </div>
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 14 }}>
-        <Outline stroke="#7A0A1E" width={10} color="#FFD23F" style={{ fontFamily: TITLE, fontWeight: 800, fontSize: 132, lineHeight: 1.05 }} shadow="0 10px 0 rgba(70,0,15,0.5)">
+        <Outline
+          stroke="#7A0A1E"
+          width={10}
+          color="#FFD23F"
+          style={{ fontFamily: TITLE, fontWeight: 800, fontSize: 132, lineHeight: 1.05 }}
+          shadow="0 10px 0 rgba(70,0,15,0.5)"
+        >
           VIDEO
         </Outline>
         <Emoji name="sparkles" size={110} />
       </div>
     </div>
 
-    {/* Trang sách xám + dấu BORING */}
+    {/* Bìa sách Tiếng Anh 8 */}
+    <div style={{ position: "absolute", left: 56, top: 590, transform: "rotate(-9deg)" }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 12,
+          top: 12,
+          width: 330,
+          height: 460,
+          borderRadius: "4px 16px 16px 4px",
+          background: "repeating-linear-gradient(90deg,#F4EFE4 0 3px,#E2D9C6 3px 5px)",
+          boxShadow: "0 24px 44px rgba(40,0,10,0.5)",
+        }}
+      />
+      <div style={{ position: "relative", width: 330, height: 460, borderRadius: "4px 16px 16px 4px", overflow: "hidden" }}>
+        <Img src={staticFile("cover.jpg")} style={{ width: 330, height: 460, display: "block" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 7%)" }} />
+      </div>
+    </div>
+
+    {/* Trang hội thoại xám + dấu BORING */}
     <div
       style={{
         position: "absolute",
-        left: 70,
-        top: 620,
+        left: 330,
+        top: 650,
         width: 600,
-        height: 420,
-        borderRadius: 28,
+        height: 410,
+        borderRadius: 26,
         overflow: "hidden",
         border: "8px solid white",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
-        transform: "rotate(-6deg)",
+        boxShadow: "0 20px 40px rgba(0,0,0,0.45)",
+        transform: "rotate(5deg)",
       }}
     >
       <Img
@@ -56,8 +88,8 @@ export const Thumb: React.FC = () => (
       <div
         style={{
           position: "absolute",
-          left: 90,
-          top: 140,
+          left: 80,
+          top: 130,
           transform: "rotate(-12deg)",
           border: "10px solid #E11D48",
           borderRadius: 24,
@@ -66,30 +98,30 @@ export const Thumb: React.FC = () => (
           fontWeight: 800,
           fontSize: 100,
           color: "#E11D48",
-          background: "rgba(255,255,255,0.7)",
+          background: "rgba(255,255,255,0.75)",
         }}
       >
         BORING!
       </div>
     </div>
-    <div style={{ position: "absolute", left: 610, top: 640 }}>
-      <Emoji name="yawn" size={190} />
+    <div style={{ position: "absolute", left: 830, top: 575, transform: "rotate(10deg)" }}>
+      <Emoji name="yawn" size={180} />
     </div>
 
     {/* Mũi tên + đũa thần */}
-    <div style={{ position: "absolute", left: 380, top: 1030, transform: "rotate(10deg)" }}>
-      <svg width={260} height={200} viewBox="0 0 260 200">
+    <div style={{ position: "absolute", left: 380, top: 1065, transform: "rotate(10deg)" }}>
+      <svg width={260} height={190} viewBox="0 0 260 200">
         <path d="M20 30 C 120 10, 210 60, 200 150" fill="none" stroke="#FFD23F" strokeWidth={20} strokeLinecap="round" />
         <path d="M160 130 L 202 178 L 238 122" fill="none" stroke="#FFD23F" strokeWidth={20} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </div>
-    <div style={{ position: "absolute", left: 150, top: 1050 }}>
-      <Emoji name="wand" size={170} />
+    <div style={{ position: "absolute", left: 150, top: 1075 }}>
+      <Emoji name="wand" size={160} />
     </div>
     {[
-      [110, 1030, 60],
-      [330, 1130, 44],
-      [640, 1060, 52],
+      [110, 1080, 56],
+      [330, 1170, 42],
+      [660, 1100, 50],
     ].map(([x, y, s], i) => (
       <div key={i} style={{ position: "absolute", left: x, top: y }}>
         <Star4 size={s} color="#FFFFFF" />
@@ -101,7 +133,7 @@ export const Thumb: React.FC = () => (
       style={{
         position: "absolute",
         left: 120,
-        top: 1220,
+        top: 1245,
         width: 820,
         height: 380,
         borderRadius: 34,
@@ -132,12 +164,12 @@ export const Thumb: React.FC = () => (
         Tet is coming!
       </div>
     </div>
-    <div style={{ position: "absolute", left: 760, top: 1480 }}>
-      <Emoji name="starstruck" size={170} />
+    <div style={{ position: "absolute", left: 770, top: 1500 }}>
+      <Emoji name="starstruck" size={160} />
     </div>
 
     {/* Tên kênh */}
-    <div style={{ position: "absolute", left: 90, width: 900, top: 1650, display: "flex", justifyContent: "center" }}>
+    <div style={{ position: "absolute", left: 90, width: 900, top: 1690, display: "flex", justifyContent: "center" }}>
       <div
         style={{
           background: "white",

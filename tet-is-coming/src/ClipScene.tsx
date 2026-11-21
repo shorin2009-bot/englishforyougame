@@ -1,7 +1,7 @@
 import React from "react";
 import { Img, OffthreadVideo, Sequence, random, staticFile, useCurrentFrame } from "remotion";
 import { BODY, TITLE } from "./fonts";
-import { CARDS, CLIP_F, CLIP_LEN, CLIP_START_F, CS, Card, FPS, GUESS_COUNT, REVEAL_AT, SUBS } from "./timeline";
+import { CARDS, CLIP_F, CLIP_LEN, CLIP_START_F, CS, Card, FPS, GUESS_COUNT, REVEAL_AT, SHIFT_F, SUBS } from "./timeline";
 import { Emoji, Outline, easeIn, easeOut, lerp, life, pop } from "./ui";
 
 // ---------------- Bố cục khung TV ----------------
@@ -137,7 +137,7 @@ const TVFrame: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
         }}
       >
         {t < CS && <Img src={staticFile("clip-first.jpg")} style={{ width: CLIP_W, height: CLIP_FULL_H }} />}
-        <Sequence from={CLIP_START_F} durationInFrames={CLIP_F} layout="none">
+        <Sequence from={CLIP_START_F + SHIFT_F} durationInFrames={CLIP_F} layout="none">
           <OffthreadVideo src={staticFile("clip.mp4")} style={{ width: CLIP_W, height: CLIP_FULL_H }} />
         </Sequence>
         {t >= CS + CLIP_LEN && <Img src={staticFile("clip-last.jpg")} style={{ width: CLIP_W, height: CLIP_FULL_H }} />}
@@ -479,7 +479,7 @@ const Progress: React.FC<{ t: number }> = ({ t }) => {
 };
 
 export const ClipLayer: React.FC = () => {
-  const frame = useCurrentFrame();
+  const frame = useCurrentFrame() - SHIFT_F;
   const t = frame / FPS;
   const flash = Math.max(life(t, 12.3, 12.62, 0.08, 0.24) * 0.85, 0);
   return (

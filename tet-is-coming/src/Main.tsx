@@ -5,7 +5,7 @@ import "./fonts";
 import { BODY, TITLE } from "./fonts";
 import { ClipLayer } from "./ClipScene";
 import { HookBackground, HookLayer } from "./Hook";
-import { FPS, LEAD, OUTRO_AT, SFX, V } from "./timeline";
+import { FPS, LEAD, OUTRO_AT, SFX, SHIFT_F, V } from "./timeline";
 import { Emoji, FallingBlossoms, Lantern, Outline, TetBackground, easeIn, easeOut, lerp, pop } from "./ui";
 
 // Rung màn hình: [thời điểm, độ dài, biên độ]
@@ -128,7 +128,7 @@ const Outro: React.FC<{ t: number; frame: number }> = ({ t, frame }) => {
 };
 
 export const TetIsComing: React.FC = () => {
-  const frame = useCurrentFrame();
+  const frame = useCurrentFrame() - SHIFT_F;
   const t = frame / FPS;
   const sh = shakeAt(t);
   const red = lerp(t, 8.95, 9.9, 0, 2300, easeIn);
@@ -155,11 +155,11 @@ export const TetIsComing: React.FC = () => {
       </AbsoluteFill>
 
       {/* ---------- Âm thanh ---------- */}
-      <Sequence from={Math.round(LEAD * FPS)} layout="none">
+      <Sequence from={Math.round(LEAD * FPS) + SHIFT_F} layout="none">
         <Audio src={staticFile("voice.wav")} volume={1} />
       </Sequence>
       {SFX.map((s, i) => (
-        <Sequence key={i} from={Math.round(s.at * FPS)} layout="none">
+        <Sequence key={i} from={Math.round(s.at * FPS) + SHIFT_F} layout="none">
           <Audio src={staticFile(`sfx/${s.src}.wav`)} volume={s.vol} />
         </Sequence>
       ))}
