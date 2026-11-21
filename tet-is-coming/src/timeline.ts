@@ -79,16 +79,7 @@ export const REVEAL_AT = 14.4;
 
 // ---------------- Hiệu ứng âm thanh (thời gian trong video) ----------------
 export const SFX: { at: number; src: string; vol: number }[] = [
-  // bìa sách rơi xuống, mở bìa, lật trang
-  { at: -0.33, src: "impact", vol: 0.5 },
-  { at: -0.2, src: "coverflip", vol: 0.55 },
-  ...[0.52, 0.84, 1.05, 1.25, 1.43, 1.6, 1.76].map((at, i) => ({
-    at,
-    src: `flip${(i % 3) + 1}`,
-    vol: 0.42 + (i % 2) * 0.08,
-  })),
-  { at: 2.15, src: "zoom", vol: 0.3 },
-  { at: 3.0, src: "tick", vol: 0.45 },
+  // đoạn mở đầu (bìa sách, lật trang, đọc hội thoại): không có hiệu ứng âm thanh, chỉ có giọng đọc
   { at: V(4.65), src: "pop", vol: 0.55 },
   { at: V(5.79), src: "boom", vol: 0.75 },
   { at: 7.62, src: "magic", vol: 0.42 },
