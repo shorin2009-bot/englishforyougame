@@ -74,9 +74,9 @@ export const REVEAL_AT = 14.4;
 
 // ---------------- Hiệu ứng âm thanh (thời gian trong video) ----------------
 export const SFX: { at: number; src: string; vol: number }[] = [
-  { at: 0.0, src: "whoosh", vol: 0.5 },
-  { at: 0.5, src: "thud", vol: 0.6 },
-  { at: 1.45, src: "whoosh", vol: 0.3 },
+  { at: 0.0, src: "intro", vol: 0.55 },
+  { at: 0.48, src: "impact", vol: 0.6 },
+  { at: 1.45, src: "zoom", vol: 0.3 },
   { at: 3.0, src: "tick", vol: 0.45 },
   { at: V(4.65), src: "pop", vol: 0.55 },
   { at: V(5.79), src: "boom", vol: 0.75 },
@@ -84,11 +84,11 @@ export const SFX: { at: number; src: string; vol: number }[] = [
   { at: 8.6, src: "ting", vol: 0.35 },
   { at: 9.55, src: "pop", vol: 0.35 },
   { at: 9.75, src: "pop", vol: 0.35 },
-  { at: 10.15, src: "whoosh", vol: 0.35 },
+  { at: 10.15, src: "zoomdown", vol: 0.32 },
   { at: 10.35, src: "blip", vol: 0.45 },
   { at: V(11.05), src: "pops", vol: 0.5 },
   { at: 12.15, src: "tap", vol: 0.55 },
-  { at: 12.28, src: "whoosh", vol: 0.3 },
+  { at: 12.28, src: "zoom", vol: 0.28 },
   // trong clip: âm thật nhẹ để không át lời thoại
   ...[2.45, 6.25, 9.05, 10.4, 16.25, 18.95].map((t) => ({ at: CS + t, src: "blip", vol: 0.16 })),
   ...GUESS_COUNT.map((t) => ({ at: CS + t, src: "tap", vol: 0.22 })),
